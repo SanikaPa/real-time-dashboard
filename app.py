@@ -3,44 +3,68 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Load your dataset
+# Load data
 df = pd.read_csv("restaurant_feedback.csv")
 
-st.title("Restaurant Feedback Dashboard")
+st.set_page_config(page_title="Restaurant Feedback Dashboard", layout="wide")
+st.title("📊 Restaurant Feedback Dashboard")
+
+# --- Basic Info ---
+st.sidebar.header("Filter Options")
+if 'Gender' in df.columns:
+    gender_filter = st.sidebar.multiselect("Select Gender", options=df['Gender'].dropna().unique(), default=df['Gender'].unique())
+    df = df[df['Gender'].isin(gender_filter)]
 
 # Dataset preview
-st.subheader("Dataset Preview")
+st.subheader("👀 Dataset Preview")
 st.dataframe(df.head())
 
-# General Info
-st.subheader("Basic Statistics")
-st.write(df.describe())
+# --- Demographics Section ---
+st.markdown("## 👤 Customer Demographics")
 
-# Gender Distribution
-st.subheader("Gender Distribution")
-st.bar_chart(df['Gender'].value_counts())
+col1, col2 = st.columns(2)
 
-# Age Distribution
-st.subheader("Age Distribution")
-fig, ax = plt.subplots()
-sns.histplot(df['Age'], bins=10, kde=True, ax=ax)
-st.pyplot(fig)
+with col1:
+    if 'Gender' in df.columns:
+        st.markdown("### Gender Distribution")
+        st.bar_chart(df['Gender'].value_counts())
 
-# Ratings Overview
-st.subheader("Average Ratings")
-st.write(df[['Food_Rating', 'Service_Rating', 'Ambience_Rating']].mean())
+with col2:
+    if 'Age' in df.columns:
+        st.markdown("### Age Distribution")
+        fig, ax = plt.subplots()
+        sns.histplot(df['Age'].dropna(), bins=10, kde=True, ax=ax)
+        st.pyplot(fig)
 
-# Recommendation vs Ratings
-st.subheader("Impact of Ratings on Recommendation")
-fig, ax = plt.subplots()
-sns.boxplot(x='Will_Recommend', y='Food_Rating', data=df, ax=ax)
-st.pyplot(fig)
+# --- Ratings Overview ---
+st.markdown("## ⭐ Ratings Overview")
+rating_cols = ['Food_Rating', 'Service_Rating', 'Ambience_Rating']
+if all(col in df.columns for col in rating_cols):
+    st.write("### Average Ratings")
+    st.write(df[rating_cols].mean().round(2))
 
-# Optional: Feedback Comments Word Cloud
-# st.subheader("Feedback Word Cloud")
-# [Add code for wordcloud if text is available]
+    st.write("### Rating Distributions")
+    fig, ax = plt.subplots(1, 3, figsize=(18, 4))
+    for i, col in enumerate(rating_cols):
+        sns.histplot(df[col].dropna(), bins=5, ax=ax[i])
+        ax[i].set_title(col)
+    st.pyplot(fig)
 
-# Filter-based View
-st.subheader("Filter by Gender")
-gender_filter = st.selectbox("Select Gender", options=df['Gender'].unique())
-st.dataframe(df[df['Gender'] == gender_filter])
+# --- Recommendation Impact ---
+if 'Will_Recommend' in df.columns:
+    st.markdown("## 👍 Recommendation vs Ratings")
+    for col in rating_cols:
+        if col in df.columns:
+            st.write(f"### {col} vs Willingness to Recommend")
+            fig, ax = plt.subplots()
+            sns.boxplot(x='Will_Recommend', y=col, data=df, ax=ax)
+            st.pyplot(fig)
+
+# --- Insights ---
+st.markdown("## 📌 Business Insights")
+st.markdown("""
+- 👩‍🍳 **Focus on Ratings:** Customers who give high *Food* and *Service* ratings are more likely to recommend. Consider improving areas with lower scores.
+- 🧑‍🤝‍🧑 **Target Demographics:** If one gender/age group dominates, explore personalized marketing.
+- 📢 **Recommendation = Growth:** Encourage promoters to share positive experiences online.
+- 📬 **Collect More Feedback:** Add optional questions like “What did you like most?” or “Any suggestions?”
+""")
